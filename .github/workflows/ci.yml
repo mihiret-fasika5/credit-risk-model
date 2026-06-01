@@ -1,0 +1,20 @@
+name: CI 
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python --version
+      - run: pip install -r requirements.txt
+      - run: flake8 src/ tests/ --max-line-length=88
+      - run: pytest tests/ -v --tb=short
