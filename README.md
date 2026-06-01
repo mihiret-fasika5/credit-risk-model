@@ -60,3 +60,5 @@ In regulated financial environments, this creates a clear tension: improving pre
 Summary
 
 The Basel II framework strongly influences credit risk modeling by prioritizing transparency, interpretability, and model governance. Because true default labels are often unavailable, proxy variables are necessary but introduce bias and instability. As a result, financial institutions must balance the need for predictive accuracy with strict regulatory expectations, often favoring interpretable models despite the availability of more powerful machine learning techniques.
+
+data source: [https://www.kaggle.com/datasets/atwine/xente-challenge]
