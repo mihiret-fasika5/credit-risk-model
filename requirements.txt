@@ -1,0 +1,12 @@
+pandas
+numpy
+matplotlib
+seaborn
+python-dotenv
+pytest
+flake8
+scikit_learn
+nltk
+gensim
+yfinance
+pynance
