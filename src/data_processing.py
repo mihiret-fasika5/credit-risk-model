@@ -215,7 +215,7 @@ if __name__ == "__main__":
 
 
 
-    import numpy as np
+   import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
@@ -231,12 +231,12 @@ from sklearn.cluster import KMeans
 class ProxyTargetEngineer:
     """
     Engineers a proxy credit risk target variable using RFM metrics and K-Means clustering.
-    Handles small datasets dynamically to prevent ValueError constraints.
     """
     def __init__(self, n_clusters=3, random_state=42):
         self.n_clusters = n_clusters
         self.random_state = random_state
         self.scaler = StandardScaler()
+        self.kmeans = KMeans(n_clusters=self.n_clusters, random_state=self.random_state, n_init=10)
         self.high_risk_cluster_id_ = None
 
     def fit_predict_labels(self, df):
@@ -258,41 +258,28 @@ class ProxyTargetEngineer:
             'Amount': 'Monetary'
         })
         
-        n_samples = rfm_df.shape[0]
-        
-        # --- DYNAMIC SAFEGUARD ---
-        # Adjust clusters down if sample size is too small for the default cluster count
-        effective_clusters = min(self.n_clusters, n_samples)
-        
-        if effective_clusters < 2:
-            # If there's only 1 customer overall, we can't isolate risk via variance.
-            # Default to marking them as low risk (0) until more data populates.
-            rfm_df['is_high_risk'] = 0
-            return rfm_df['is_high_risk'].to_dict()
-            
-        # Initialize KMeans with the safely adjusted cluster sizes
-        kmeans = KMeans(n_clusters=effective_clusters, random_state=self.random_state, n_init=10)
-        # -------------------------
-
         # 3. Pre-process / Scale RFM features
         scaled_rfm = self.scaler.fit_transform(rfm_df)
         
         # 4. Cluster Customers
-        rfm_df['Cluster'] = kmeans.fit_predict(scaled_rfm)
+        rfm_df['Cluster'] = self.kmeans.fit_predict(scaled_rfm)
         
         # 5. Programmatically identify the highest-risk (least engaged) cluster
+        # Low Frequency + Low Monetary indicates high risk of disengagement/default
         cluster_centers = pd.DataFrame(
-            self.scaler.inverse_transform(kmeans.cluster_centers_),
+            self.scaler.inverse_transform(self.kmeans.cluster_centers_),
             columns=['Recency', 'Frequency', 'Monetary']
         )
         
-        # Calculate structural risk score (higher score = lower transaction profiles)
+        # Sort cluster indices prioritizing low frequency and low monetary output
+        # (Low frequency + low monetary = higher structural risk index score)
         cluster_centers['Risk_Score'] = cluster_centers['Recency'] / (cluster_centers['Frequency'] * cluster_centers['Monetary'] + 1e-5)
         self.high_risk_cluster_id_ = cluster_centers['Risk_Score'].idxmax()
         
         # Create binary label mapping
         rfm_df['is_high_risk'] = (rfm_df['Cluster'] == self.high_risk_cluster_id_).astype(int)
         
+        # Return a dictionary linking CustomerId -> is_high_risk target label
         return rfm_df['is_high_risk'].to_dict()
 
 # ==========================================
